@@ -163,29 +163,60 @@ fork(void)
 //changes the write bits to reflect whether the process
 //is readable
 int mprotect(void *addr, int len){
-	int va;
-	va = (uint)addr;
+	int va = (uint)addr;
 	if ((va%PGSIZE)!=0){
 		return -1;
 	}
 	pte_t *pte;
 	pte = walkpgdir(proc->pgdir, (void*)va, 0); 
-	if (pte){
-		for (int i=0;i<va+len*PGSIZE;i+=PGSIZE){
-			if (walkpgdir(proc->pgdir, (void*)i,0)==0)
+	if (pte != 0){
+		for (int i=0;i<((len)*PGSIZE+va);i+=PGSIZE){
+			if ((*pte &PTE_P)==0) 
 				return -1;
-			if ((*pte &PTE_U)==0 || (*pte &PTE_P)==0)
+			if ((*pte & PTE_U)==0)
 				return -1;
+			if (walkpgdir(proc->pgdir, (void*)i, 0) == 0) { 
+				return -1;
+			}
 		}
-		for (i=va;i<(va+len*PGSIZE);i+=PGSIZE){
-			pte= wakepgdir(proc->pgdir, (void*)i,0);
+		for (int j = va; j<((len)*PGSIZE+va); j+=PGSIZE){
+			pte= walkpgdir(proc->pgdir, (void*)j,0);
 			*pte=PADDR(*pte)&(~PTE_W);	
 		}
 	}	
 	lcr3(PADDR(proc->pgdir));
 	return 0;
 }
+ 
+int munprotect (void *addr, int len){
+	int va = (uint)addr;
+	if ((va%PGSIZE)!=0) { 
+		return -1;
+	}
+	pte_t *pte;
+	pte = walkpgdir(proc->pgdir, (void*)va, 0);
+	if (pte != 0){
+		for (int i=0;i<((len)*PGSIZE+va); i += PGSIZE){	
+			if ((*pte &PTE_P)==0) 
+				return -1;
+			if ((*pte & PTE_U)==0)
+				return -1;
+			if (walkpgdir(proc->pgdir, (void*)i, 0) == 0) { 
+				return -1;
+			}
+		}
+		for (int j = va; j<((len)*PGSIZE+va); j+= PGSIZE){
+		pte=walkpgdir (proc->pgdir, (void*)j,0);
+		*pte=PADDR(*pte) | (PTE_W);
+		}
 
+		
+
+	}
+	lcr3(PADDR(proc->pgdir));
+	return 0;
+
+}
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait() to find out it exited.
