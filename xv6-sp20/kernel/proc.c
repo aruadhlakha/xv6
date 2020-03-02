@@ -5,6 +5,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "vm.c"
 
 struct {
   struct spinlock lock;
@@ -157,6 +158,32 @@ fork(void)
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
   return pid;
+}
+
+//changes the write bits to reflect whether the process
+//is readable
+int mprotect(void *addr, int len){
+	int va;
+	va = (uint)addr;
+	if ((va%PGSIZE)!=0){
+		return -1;
+	}
+	pte_t *pte;
+	pte = walkpgdir(proc->pgdir, (void*)va, 0); 
+	if (pte){
+		for (int i=0;i<va+len*PGSIZE;i+=PGSIZE){
+			if (walkpgdir(proc->pgdir, (void*)i,0)==0)
+				return -1;
+			if ((*pte &PTE_U)==0 || (*pte &PTE_P)==0)
+				return -1;
+		}
+		for (i=va;i<(va+len*PGSIZE);i+=PGSIZE){
+			pte= wakepgdir(proc->pgdir, (void*)i,0);
+			*pte=PADDR(*pte)&(~PTE_W);	
+		}
+	}	
+	lcr3(PADDR(proc->pgdir));
+	return 0;
 }
 
 // Exit the current process.  Does not return.

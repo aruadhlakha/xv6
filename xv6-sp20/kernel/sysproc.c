@@ -80,10 +80,10 @@ int sys_mprotect (void){
 	int len;
 	if (argint (0, &len)<0 || argptr((void*)&addr, sizeof(*addr))<0)
 		return -1;
-	return mprotect(addr, len);
+	return mprotect(adr, len);
 }
 
-int sys_munprotect (void){                                                                                                   void *addr;                                                                                                   int len;                                                                                                       if (argint (0, &len)<0 || argptr((void*)&addr, sizeof(*addr))<0)                                                       return -1;                                                                                             return munprotect(addr, len);                                                                            } 
+int sys_munprotect (void){                                                                         void *addr;                                                                                      int len;                                                                                         if (argint (0, &len)<0 || argptr((void*)&addr, sizeof(*addr))<0)                                 return -1;                                                                                       return munprotect(addr, len);                                                                  } 
 // return how many clock tick interrupts have occurred
 // since boot.
 int
